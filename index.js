@@ -1,7 +1,7 @@
 var sio = require('socket.io');
 var forwarded = require('forwarded-for');
 var debug = require('debug');
-
+var redis = require('redis')
 process.title = 'groupDraw-io';
 
 var port = process.env.WEPLAY_PORT || 3001;
@@ -29,13 +29,13 @@ io.on('connection', function(socket){
   });
 
   // send events log so far
-  redis.lrange('weplay:log', 0, 20, function(err, log){
-    if (!Array.isArray(log)) return;
-    log.reverse().forEach(function(data){
-      data = data.toString();
-      socket.emit.apply(socket, JSON.parse(data));
-    });
-  });
+  // redis.lrange('weplay:log', 0, 20, function(err, log){
+  //   if (!Array.isArray(log)) return;
+  //   log.reverse().forEach(function(data){
+  //     data = data.toString();
+  //     socket.emit.apply(socket, JSON.parse(data));
+  //   });
+  // });
   // socket.on('paint', function(data){
   //   console.log('works')
   // })
@@ -49,19 +49,21 @@ io.on('connection', function(socket){
     io.in(userInfo.room).emit('joined', userInfo.name)
     // broadcast(socket, 'join', nick);
   });
-  
   socket.on('paint', function(data){
-    socket.broadcast.to(data.room).emit('paint', data);
+    broadcast('paint', data)
+  });
+  socket.on('hover', function(data){
+    broadcast('hover', data)
+  });
+  socket.on('pressed', function(data){
+    broadcast('pressed', data)
   });
   
   socket.on('move', function(data){
-    socket.broadcast.to(data.room).emit('move', data);
+    broadcast('move', data)
   });
+  function broadcast(key, data){
+    socket.broadcast.to(data.room).emit(key, data);
+  }
 });
 
-function broadcast(socket/*, …*/){
-  var args = Array.prototype.slice.call(arguments, 1);
-  redis.lpush('weplay:log', JSON.stringify(args));
-  redis.ltrim('weplay:log', 0, 20);
-  socket.broadcast.emit.apply(socket, args);
-}
