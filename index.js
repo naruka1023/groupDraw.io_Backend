@@ -23,34 +23,71 @@ io.on('connection', function(socket){
   var ip = forwarded(req, req.headers);
   console.log('client ip %s', ip.port);
 
+  function printStats(){
+    console.log('done')
+    Object.keys(socket.adapter.rooms).forEach( function(socketId){
+      console.log('========')
+      console.log("sioRoom client socket Id: " + socketId );
+      console.log('inside that key have a value of: ' + JSON.stringify(socket.adapter.rooms[socketId]))
+      console.log('========')
+    }); 
+    console.log('done')
+  }
+
+  function updateList(socket, action){
+    redis.smembers(`roomMembers:${socket.room}`, function(err, result){
+      final = []
+      result.forEach(function(r){
+        final.push(JSON.parse(r.toString()));
+      })
+      payload = {
+        mainName: socket.userName,
+        list:final
+      };
+      io.in(socket.room).emit(action, payload)
+    })
+
+  }
   // keep track of connected clients
   socket.on('disconnect', function(){
-    console.log(`client ${ip.port} is leaving`)
+    // printStats()
+    redis.srem(`roomMembers:${socket.room}`, socket.userEntity, function(){
+      console.log(`client ${socket.userEntity} is leaving`)
+      updateList(socket, 'leave')
+
+    })
   });
-
-  // send events log so far
-  // redis.lrange('weplay:log', 0, 20, function(err, log){
-  //   if (!Array.isArray(log)) return;
-  //   log.reverse().forEach(function(data){
-  //     data = data.toString();
-  //     socket.emit.apply(socket, JSON.parse(data));
-  //   });
-  // });
-  // socket.on('paint', function(data){
-  //   console.log('works')
-  // })
-  // broadcast moves, throttling them first
-
-
 
   // broadcast user joining
   socket.on('join', function(userInfo){
-    socket.join(userInfo.room)
-    io.in(userInfo.room).emit('joined', userInfo.name)
-    // broadcast(socket, 'join', nick);
+    socket.join(userInfo.room, function(){
+      userEntity = {
+        name:userInfo.name,
+        id:socket.id
+      }
+
+      //set values for disconnect event
+      userEntity = JSON.stringify(userEntity);
+      socket.room = userInfo.room
+      socket.userName = userInfo.name
+      socket.userEntity = userEntity
+
+      //update redis and broadcast redis value of memebers inside room to other clients in the same room
+      redis.sadd(`roomMembers:${socket.room}`, userEntity, function(err, result){
+        updateList(socket, 'joined')
+      })
+
+    })
   });
   socket.on('paint', function(data){
-    broadcast('paint', data)
+    redisData = {
+      x:data.x,
+      y:data.y,
+      color:data.color,
+    }
+    redis.lpush(`roomRecords:${data.room}`,JSON.stringify(redisData),function(){
+      broadcast('paint', data)
+    })
   });
   socket.on('hover', function(data){
     broadcast('hover', data)
