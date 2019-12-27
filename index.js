@@ -18,6 +18,19 @@ var redis = require('./redis')();
 
 
 io.total = 0;
+redis.scan('0', 'MATCH', 'room*',function(part, full){
+  if(full.length == 0){
+    return
+  }else{
+    temp = full.map((f)=>{
+      return f.toString()
+    })
+    final = temp[1].split(",");
+    redis.del(final, function(){
+      console.log('all residual keys are deleted')
+    })
+  }
+})
 io.on('connection', function(socket){
   var req = socket.request;
   var ip = forwarded(req, req.headers);
@@ -57,7 +70,12 @@ io.on('connection', function(socket){
 
     })
   });
-
+  //broadcast clearing of canvas in a room
+  socket.on('clear', function(room){
+    redis.del(`roomRecords:${room}`, function(){
+      socket.broadcast.to(room).emit('clear');
+    })
+  })
   // broadcast user joining
   socket.on('join', function(userInfo){
     socket.join(userInfo.room, function(){
@@ -83,6 +101,8 @@ io.on('connection', function(socket){
     redisData = {
       x:data.x,
       y:data.y,
+      px:data.px,
+      py:data.py,
       color:data.color,
     }
     redis.lpush(`roomRecords:${data.room}`,JSON.stringify(redisData),function(){
