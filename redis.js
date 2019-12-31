@@ -1,5 +1,5 @@
 var redis = require('redis');
-
+url = process.env.REDIS_SERVER
 module.exports = function(){
-  return redis.createClient(process.env.REDIS_SERVER, { return_buffers: true });
+  return redis.createClient(url, { return_buffers: true });
 };
