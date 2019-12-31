@@ -4,13 +4,13 @@ var debug = require('debug');
 var redis = require('redis')
 process.title = 'groupDraw-io';
 
-var port = process.env.WEPLAY_PORT || 3001;
+var port = process.env.BACK_PORT || 3001;
 var io = module.exports = sio(port);
 console.log('listening on *:' + port);
 
 
 // redis socket.io adapter
-var uri = process.env.WEPLAY_REDIS || 'localhost:6379';
+var uri = process.env.REDIS_SERVER || 'localhost:6379';
 // io.adapter(require('socket.io-redis')(uri));
 
 // redis queries instance
@@ -104,6 +104,7 @@ io.on('connection', function(socket){
       px:data.px,
       py:data.py,
       color:data.color,
+      weight:data.weight 
     }
     redis.lpush(`roomRecords:${data.room}`,JSON.stringify(redisData),function(){
       broadcast('paint', data)
