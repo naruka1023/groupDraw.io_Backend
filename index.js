@@ -10,7 +10,7 @@ console.log('listening on *:' + port);
 
 
 // redis socket.io adapter
-var uri = process.env.REDIS_SERVER || 'localhost:6379';
+var uri = process.env.REDISCLOUD_URL || 'localhost:6379';
 // io.adapter(require('socket.io-redis')(uri));
 
 // redis queries instance
