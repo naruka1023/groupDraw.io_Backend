@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "forwarded-for": "^1.1.0",
-    "redis": "^2.8.0",
+    "redis": "^3.1.1",
     "socket.io": "2.3.0"
   }
 }
